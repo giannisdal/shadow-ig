@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: instagram-monitor
+  datasource:
+    url: jdbc:h2:file:./data/instagram-monitor
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  h2:
+    console:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+instagram:
+  monitoring:
+    enabled: true
+    polling-interval: 60s
+    notify-on-startup: false
+    max-items-per-account: 10
+    request-timeout: 10s
+    max-retries: 3
+    retry-backoff: 2s
+    accounts:
+      - username: account_one
+        enabled: true
+        posts: true
+        stories: true
+        reels: true
+      - username: account_two
+        enabled: true
+        posts: true
+        stories: true
+        reels: true
+  api:
+    access-token: ${INSTAGRAM_ACCESS_TOKEN:}
+    ig-user-id: ${INSTAGRAM_IG_USER_ID:}
+    base-url: https://graph.facebook.com/v22.0
+
+notifications:
+  email:
+    enabled: true
+    recipient: myemail@example.com
+    sender: alerts@yourdomain.com
+    max-retries: 3
+    retry-backoff: 2s
+
+resend:
+  api-key: ${RESEND_API_KEY:}
