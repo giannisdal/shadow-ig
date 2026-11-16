@@ -71,14 +71,14 @@ For a foreground packaged process:
 
 ```bash
 mvn package
-java -jar target/shadow-ig-0.0.1-SNAPSHOT.jar
+java -jar target/shadow-ig.jar
 ```
 
 The default HTTP port is `8081` (override with `SERVER_PORT`). On the server, place the
 JAR and configured `.env` in the same working directory, with Java 25 installed, then run:
 
 ```bash
-nohup java -jar shadow-ig-0.0.1-SNAPSHOT.jar > monitor.log 2>&1 < /dev/null &
+nohup java -jar shadow-ig.jar > monitor.log 2>&1 < /dev/null &
 ```
 
 The `data/` directory is created relative to that working directory; preserve it between
