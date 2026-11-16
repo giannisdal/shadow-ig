@@ -11,6 +11,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class InstagramMonitorApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(InstagramMonitorApplication.class, args);
+        var context = SpringApplication.run(InstagramMonitorApplication.class, args);
+        if (context.getEnvironment().getProperty("instagram.monitoring.run-once", Boolean.class, false)) {
+            try (context) {
+                context.getBean(com.giannisdal.shadowig.monitoring.InstagramMonitoringService.class).monitorOnceOrThrow();
+            }
+        }
     }
 }

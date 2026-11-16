@@ -11,6 +11,8 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
+import java.util.List;
+import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class ResendEmailService implements EmailNotificationService {
@@ -48,11 +50,33 @@ public class ResendEmailService implements EmailNotificationService {
                 """.formatted(
                 username,
                 content.type(),
-                DATE_TIME_FORMATTER.format(content.publishedAt()),
+                content.publishedAt() == null ? "Unavailable on public page" : DATE_TIME_FORMATTER.format(content.publishedAt()),
                 content.permalink(),
                 DATE_TIME_FORMATTER.format(clock.instant())
         );
 
+        return send(username, content.id(), subject, body);
+    }
+
+    @Override
+    public Optional<String> sendDailyDigest(String username, List<InstagramContentItem> contents) {
+        if (!properties.enabled() || contents.isEmpty()) {
+            return Optional.empty();
+        }
+        var body = new StringBuilder("<html><body><p>Instagram daily update: @")
+                .append(HtmlUtils.htmlEscape(username)).append("</p><ul>");
+        for (var item : contents) {
+            body.append("<li>").append(item.type()).append(" — ")
+                    .append(item.publishedAt() == null ? "Publication time unavailable" : DATE_TIME_FORMATTER.format(item.publishedAt()))
+                    .append(" — <a href=\"").append(HtmlUtils.htmlEscape(item.permalink()))
+                    .append("\">Open on Instagram</a></li>");
+        }
+        body.append("</ul><p>Checked at: ").append(DATE_TIME_FORMATTER.format(clock.instant()))
+                .append("</p></body></html>");
+        return send(username, "daily-digest", "Instagram daily update — @" + username + " (" + contents.size() + " new)", body.toString());
+    }
+
+    private Optional<String> send(String username, String contentId, String subject, String body) {
         var delay = properties.retryBackoff();
         for (int attempt = 1; attempt <= properties.maxRetries(); attempt++) {
             try {
@@ -60,10 +84,10 @@ public class ResendEmailService implements EmailNotificationService {
                 return Optional.ofNullable(resendMessageId);
             } catch (NotificationDeliveryException exception) {
                 if (!exception.retryable() || attempt >= properties.maxRetries()) {
-                    log.error("Email notification failed for @{} {} after {} attempt(s)", username, content.id(), attempt, exception);
+                    log.error("Email notification failed for @{} {} after {} attempt(s)", username, contentId, attempt, exception);
                     throw exception;
                 }
-                log.warn("Temporary email failure for @{} {}. Retrying attempt {}/{}", username, content.id(), attempt + 1, properties.maxRetries());
+                log.warn("Temporary email failure for @{} {}. Retrying attempt {}/{}", username, contentId, attempt + 1, properties.maxRetries());
                 sleep(delay.toMillis() * attempt);
             }
         }

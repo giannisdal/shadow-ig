@@ -1,46 +1,56 @@
 # shadow-ig
 
-Backend-only Spring Boot service that monitors configured Instagram Business/Creator public accounts and sends email alerts through Resend for newly detected content.
+Spring Boot backend that checks public Instagram accounts through the StoriesIG REST API
+and emails a daily digest through Resend when it finds new content.
 
-## Stack
+## Daily monitoring
 
-- Java 25
-- Spring Boot 4.1.x / Spring Framework 7
-- Maven
-- Spring Scheduling
-- Spring Data JPA + persistent file-based H2
-- Resend Java SDK
-- Spring Boot Actuator
-- JUnit + Mockito
+The default account is `example_account`. Stories and posts are checked once a day at
+**21:00 Europe/Athens**, including daylight saving changes. The application must remain
+running, and the host must be awake with network access at that time. Restarting it does
+not trigger an immediate check or catch up a missed scheduled run.
 
-## What is supported with official APIs
+Each daily check makes one `/stories` call and one `/posts` call per account. There are no
+automatic API retries or pagination calls. That is 60–62 requests per month per account,
+within the provider's advertised free allowance of 1,000 requests/month. Manual checks,
+additional accounts and enabling the separate reels endpoint consume additional requests.
+Requests are spaced below the advertised two requests/second limit. Authentication,
+quota and rate-limit errors stop the cycle; unknown API responses are logged as failures,
+never interpreted as an empty feed.
 
-This project uses Instagram Graph API Business Discovery.
+Only the first response page is fetched and up to `max-items-per-account` items of each
+requested type are processed. Stories that appear and expire between daily checks can be
+missed. The API is an external provider, so its availability and returned content determine
+what the monitor can detect.
 
-Supported:
-- Public Instagram Business/Creator account media discovery (posts and reels when exposed through media feed)
-
-Not supported by this implementation (official API limitation):
-- Monitoring stories of unrelated third-party accounts via Business Discovery
-- Arbitrary personal account scraping or private/unauthorized endpoints
-
-When stories are enabled in YAML, the service logs that stories are unsupported for that account and continues processing supported content.
+One email per account contains all newly detected items and Instagram links. Previously
+seen IDs are persisted in H2 to avoid duplicate notifications. On every check, posts and reels are emailed only if published after yesterday at 21:00
+and through today at 21:00 in Europe/Athens (including daylight saving changes). Older posts and posts without a publication
+timestamp are recorded silently. Active stories keep their existing notification behavior. Set `notify-on-startup=false`
+to establish the entire initial baseline silently. Failed email sends are not marked as
+processed, so they can be retried on the next check.
 
 ## Configuration
 
-Copy `.env.example` to `.env` (or set env vars in your runtime environment):
+Java 25 and Maven are required. Copy `.env.example` to `.env` and configure:
 
-- `INSTAGRAM_ACCESS_TOKEN`
-- `INSTAGRAM_IG_USER_ID`
-- `RESEND_API_KEY`
+```properties
+INSTAGRAM_USERNAME=example_account
+STORIESIG_API_KEY=your-free-api-key
+RESEND_API_KEY=your-resend-key
+NOTIFICATION_EMAIL_RECIPIENT=you@example.com
+NOTIFICATION_EMAIL_SENDER=onboarding@resend.dev
+INSTAGRAM_MONITOR_CRON=0 0 21 * * *
+```
 
-Main settings are in `src/main/resources/application.yml`:
+Get a free StoriesIG API key from [scraperapi.to](https://scraperapi.to).
+[API documentation](https://storiesig.info/en/api/) describes the `/stories` and `/posts`
+endpoints. The key is sent only to that API as a Bearer token. Instagram credentials are
+not needed. `.env` is ignored by Git; existing environment variables take precedence.
 
-- `instagram.monitoring.accounts` contains usernames and per-content toggles
-- `instagram.monitoring.polling-interval` default is `60s`
-- `notifications.email.recipient` and `notifications.email.sender`
-
-No usernames or recipient addresses are hardcoded in code.
+More accounts, content toggles, request timeout, cron and timezone are configured in
+`src/main/resources/application.yml`. Reels returned in the posts response are included;
+the separate reels endpoint is disabled by default to save requests.
 
 ## Run
 
@@ -48,32 +58,41 @@ No usernames or recipient addresses are hardcoded in code.
 mvn spring-boot:run
 ```
 
-## Monitoring behavior
+To check immediately, send a real digest if new content exists, and exit:
 
-- Polls enabled accounts on schedule
-- Prevents overlapping runs
-- Persists seen content IDs to prevent duplicate notifications
-- First run records baseline without sending notifications unless `notify-on-startup=true`
-- Sends one email per newly detected content item
-- Retries temporary email failures with exponential backoff
-- Continues other accounts if one fails
+```bash
+mvn spring-boot:run -Dspring-boot.run.arguments="--instagram.monitoring.run-once=true --instagram.monitoring.cron=- --spring.main.web-application-type=none"
+```
 
-## Persistence
+For a foreground packaged process:
 
-Persistent H2 database file:
+```bash
+mvn package
+java -jar target/shadow-ig-0.0.1-SNAPSHOT.jar
+```
 
-- `./data/instagram-monitor.mv.db`
+The default HTTP port is `8081` (override with `SERVER_PORT`). On the server, place the
+JAR and configured `.env` in the same working directory, with Java 25 installed, then run:
 
-Stored data includes:
-- username
-- content ID/type/permalink
-- publish timestamp
-- detection timestamp
-- notification status
-- Resend message ID (when available)
+```bash
+nohup java -jar shadow-ig-0.0.1-SNAPSHOT.jar > monitor.log 2>&1 < /dev/null &
+```
 
-## Test
+The `data/` directory is created relative to that working directory; preserve it between
+deployments to retain duplicate detection. The application schedules checks at 21:00
+Europe/Athens regardless of the server's system timezone.
+
+The previous public Instagram browser implementation remains available by explicitly
+setting `instagram.monitoring.provider=browser`; StoriesIG is the default provider.
+
+## Persistence and tests
+
+Seen IDs, publication/detection times and Resend message IDs are stored in
+`./data/instagram-monitor.mv.db`. Existing records are preserved.
 
 ```bash
 mvn test
 ```
+
+The test suite uses mocked API/email clients and never sends live email. The manual
+`run-once` command above uses real credentials and does send email.

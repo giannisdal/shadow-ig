@@ -8,20 +8,23 @@ import org.springframework.stereotype.Component;
 public class StartupValidationRunner implements ApplicationRunner {
 
     private final InstagramMonitoringProperties monitoringProperties;
-    private final InstagramApiProperties apiProperties;
     private final NotificationEmailProperties emailProperties;
     private final ResendProperties resendProperties;
+    private final StoriesIgProperties storiesIgProperties;
+    private final org.springframework.core.env.Environment environment;
 
     public StartupValidationRunner(
             InstagramMonitoringProperties monitoringProperties,
-            InstagramApiProperties apiProperties,
             NotificationEmailProperties emailProperties,
-            ResendProperties resendProperties
+            ResendProperties resendProperties,
+            StoriesIgProperties storiesIgProperties,
+            org.springframework.core.env.Environment environment
     ) {
         this.monitoringProperties = monitoringProperties;
-        this.apiProperties = apiProperties;
         this.emailProperties = emailProperties;
         this.resendProperties = resendProperties;
+        this.storiesIgProperties = storiesIgProperties;
+        this.environment = environment;
     }
 
     @Override
@@ -32,11 +35,12 @@ public class StartupValidationRunner implements ApplicationRunner {
         if (monitoringProperties.enabledAccounts().isEmpty()) {
             throw new IllegalStateException("instagram.monitoring.accounts must contain at least one enabled account");
         }
+        if (environment.getProperty("instagram.monitoring.provider", "storiesig").equals("storiesig")
+                && isBlank(storiesIgProperties.apiKey())) {
+            throw new IllegalStateException("STORIESIG_API_KEY is required: obtain a free key at https://scraperapi.to and set it in .env");
+        }
         if (emailProperties.enabled() && isBlank(resendProperties.apiKey())) {
             throw new IllegalStateException("resend.api-key is required when notifications.email.enabled=true");
-        }
-        if (isBlank(apiProperties.accessToken()) || isBlank(apiProperties.igUserId()) || isBlank(apiProperties.baseUrl())) {
-            throw new IllegalStateException("instagram.api.access-token, instagram.api.ig-user-id, and instagram.api.base-url are required when monitoring is enabled");
         }
     }
 

@@ -28,7 +28,7 @@ public class ProcessedInstagramContentEntity {
     @Column(nullable = false)
     private String permalink;
 
-    @Column(nullable = false)
+    @Column
     private Instant publishedAt;
 
     @Column(nullable = false)

@@ -11,6 +11,7 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:repository;DB_CLOSE_DELAY=-1",
         "instagram.monitoring.enabled=false",
         "notifications.email.enabled=false"
 })

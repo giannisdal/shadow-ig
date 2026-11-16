@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:binding;DB_CLOSE_DELAY=-1",
         "instagram.monitoring.enabled=true",
         "instagram.monitoring.polling-interval=30s",
         "instagram.monitoring.notify-on-startup=true",
@@ -21,15 +22,13 @@ import static org.assertj.core.api.Assertions.assertThat;
         "instagram.monitoring.accounts[0].posts=true",
         "instagram.monitoring.accounts[0].stories=false",
         "instagram.monitoring.accounts[0].reels=true",
-        "instagram.api.access-token=test-token",
-        "instagram.api.ig-user-id=123",
-        "instagram.api.base-url=https://graph.facebook.com/v22.0",
         "notifications.email.enabled=true",
         "notifications.email.recipient=user@example.com",
         "notifications.email.sender=alerts@example.com",
         "notifications.email.max-retries=2",
         "notifications.email.retry-backoff=1s",
-        "resend.api-key=re_test"
+        "resend.api-key=re_test",
+        "storiesig.api-key=test-key"
 })
 class InstagramMonitoringPropertiesBindingTest {
 

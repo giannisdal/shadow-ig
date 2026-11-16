@@ -1,4 +1,9 @@
+server:
+  port: ${SERVER_PORT:8081}
+
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: instagram-monitor
   datasource:
@@ -6,7 +11,11 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  sql:
+    init:
+      mode: always
   jpa:
+    defer-datasource-initialization: true
     hibernate:
       ddl-auto: update
     open-in-view: false
@@ -23,35 +32,33 @@ management:
 instagram:
   monitoring:
     enabled: true
-    polling-interval: 60s
-    notify-on-startup: false
+    provider: storiesig
+    cron: ${INSTAGRAM_MONITOR_CRON:0 0 21 * * *}
+    zone: Europe/Athens
+    polling-interval: 24h
+    notify-on-startup: true
     max-items-per-account: 10
-    request-timeout: 10s
+    request-timeout: 30s
     max-retries: 3
     retry-backoff: 2s
     accounts:
-      - username: account_one
+      - username: ${INSTAGRAM_USERNAME:example_account}
         enabled: true
         posts: true
         stories: true
-        reels: true
-      - username: account_two
-        enabled: true
-        posts: true
-        stories: true
-        reels: true
-  api:
-    access-token: ${INSTAGRAM_ACCESS_TOKEN:}
-    ig-user-id: ${INSTAGRAM_IG_USER_ID:}
-    base-url: https://graph.facebook.com/v22.0
+        reels: false
 
 notifications:
   email:
     enabled: true
-    recipient: myemail@example.com
-    sender: alerts@yourdomain.com
+    recipient: ${NOTIFICATION_EMAIL_RECIPIENT:giannisdalamaras@gmail.com}
+    sender: ${NOTIFICATION_EMAIL_SENDER:onboarding@resend.dev}
     max-retries: 3
     retry-backoff: 2s
 
 resend:
   api-key: ${RESEND_API_KEY:}
+
+storiesig:
+  api-key: ${STORIESIG_API_KEY:}
+  base-url: https://scraperapi.to/scrape/instagram-scraper

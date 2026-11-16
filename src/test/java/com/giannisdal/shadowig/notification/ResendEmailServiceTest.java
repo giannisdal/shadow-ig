@@ -36,6 +36,20 @@ class ResendEmailServiceTest {
     }
 
     @Test
+    void sendsNotificationWhenPublicPageDoesNotExposePublicationTime() {
+        var client = mock(ResendClient.class);
+        var properties = new NotificationEmailProperties(true, "to@example.com", "from@example.com", 3, Duration.ofMillis(1));
+        var service = new ResendEmailService(client, properties, Clock.systemUTC());
+        when(client.sendEmail(anyString(), anyString(), anyString(), anyString())).thenReturn("msg_story");
+
+        var id = service.sendNewContentNotification("account", new InstagramContentItem("123", InstagramContentType.STORY,
+                "https://www.instagram.com/stories/account/123/", null));
+
+        assertThat(id).contains("msg_story");
+        verify(client).sendEmail(eq("from@example.com"), eq("to@example.com"), contains("STORY"), contains("Unavailable on public page"));
+    }
+
+    @Test
     void throwsForNonRetryableFailure() {
         var client = mock(ResendClient.class);
         var properties = new NotificationEmailProperties(true, "to@example.com", "from@example.com", 3, Duration.ofMillis(1));
