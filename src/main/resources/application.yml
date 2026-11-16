@@ -42,7 +42,7 @@ instagram:
     max-retries: 3
     retry-backoff: 2s
     accounts:
-      - username: ${INSTAGRAM_USERNAME:example_account}
+      - username: ${INSTAGRAM_USERNAME:}
         enabled: true
         posts: true
         stories: true

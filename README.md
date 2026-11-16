@@ -5,7 +5,7 @@ and emails a daily digest through Resend when it finds new content.
 
 ## Daily monitoring
 
-The default account is `example_account`. Stories and posts are checked once a day at
+The monitored account is configured through `INSTAGRAM_USERNAME` in `.env`. Stories and posts are checked once a day at
 **21:00 Europe/Athens**, including daylight saving changes. The application must remain
 running, and the host must be awake with network access at that time. Restarting it does
 not trigger an immediate check or catch up a missed scheduled run.
