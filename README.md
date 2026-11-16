@@ -5,7 +5,10 @@ and emails a daily digest through Resend when it finds new content.
 
 ## Daily monitoring
 
-The monitored account is configured through `INSTAGRAM_USERNAME` in `.env`. Stories and posts are checked once a day at
+Monitored accounts are configured through `INSTAGRAM_USERNAMES` in `.env`, separated by
+commas (for example, `example_account,another_account`). Whitespace around usernames is
+trimmed. The previous `INSTAGRAM_USERNAME` variable is supported as a fallback.
+Stories and posts for all configured accounts are checked once a day at
 **21:00 Europe/Athens**, including daylight saving changes. The application must remain
 running, and the host must be awake with network access at that time. Restarting it does
 not trigger an immediate check or catch up a missed scheduled run.
@@ -38,7 +41,7 @@ processed, so they can be retried on the next check.
 Java 25 and Maven are required. Copy `.env.example` to `.env` and configure:
 
 ```properties
-INSTAGRAM_USERNAME=example_account
+INSTAGRAM_USERNAMES=example_account,another_account
 STORIESIG_API_KEY=your-free-api-key
 RESEND_API_KEY=your-resend-key
 NOTIFICATION_EMAIL_RECIPIENT=you@example.com
@@ -51,8 +54,12 @@ Get a free StoriesIG API key from [scraperapi.to](https://scraperapi.to).
 endpoints. The key is sent only to that API as a Bearer token. Instagram credentials are
 not needed. `.env` is ignored by Git; existing environment variables take precedence.
 
-More accounts, content toggles, request timeout, cron and timezone are configured in
-`src/main/resources/application.yml`. Reels returned in the posts response are included;
+Add or remove accounts in `INSTAGRAM_USERNAMES` and restart the application. Each account
+has posts and stories enabled and the separate reels endpoint disabled. For per-account
+content toggles, replace `instagram.monitoring.accounts` in `src/main/resources/application.yml`
+with a list of objects containing `username`, `enabled`, `posts`, `stories` and `reels`.
+Request timeout, cron and timezone are configured in the same file.
+Reels returned in the posts response are included;
 the separate reels endpoint is disabled by default to save requests.
 
 ## Run

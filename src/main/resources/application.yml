@@ -41,12 +41,7 @@ instagram:
     request-timeout: 30s
     max-retries: 3
     retry-backoff: 2s
-    accounts:
-      - username: ${INSTAGRAM_USERNAME:}
-        enabled: true
-        posts: true
-        stories: true
-        reels: false
+    accounts: ${INSTAGRAM_USERNAMES:${INSTAGRAM_USERNAME:}}
 
 notifications:
   email:
