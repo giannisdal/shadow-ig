@@ -33,6 +33,7 @@ public class InstagramMonitoringService {
     private final EmailNotificationService emailNotificationService;
     private final Clock clock;
     private final ZoneId monitoringZone;
+    private final String monitoringCron;
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     public InstagramMonitoringService(
@@ -41,7 +42,8 @@ public class InstagramMonitoringService {
             ProcessedInstagramContentRepository repository,
             EmailNotificationService emailNotificationService,
             Clock clock,
-            @Value("${instagram.monitoring.zone:Europe/Athens}") String monitoringZone
+            @Value("${instagram.monitoring.zone:Europe/Athens}") String monitoringZone,
+            @Value("${instagram.monitoring.cron:0 0 21 * * *}") String monitoringCron
     ) {
         this.monitoringProperties = monitoringProperties;
         this.contentProvider = contentProvider;
@@ -49,10 +51,11 @@ public class InstagramMonitoringService {
         this.emailNotificationService = emailNotificationService;
         this.clock = clock;
         this.monitoringZone = ZoneId.of(monitoringZone);
+        this.monitoringCron = monitoringCron;
     }
 
     @Scheduled(
-            cron = "${instagram.monitoring.cron:0 0 21 * * *}",
+            cron = "#{${instagram.monitoring.run-once:false} ? '-' : '${instagram.monitoring.cron:0 0 21 * * *}'}",
             zone = "${instagram.monitoring.zone:Europe/Athens}"
     )
     public void scheduledMonitor() {
@@ -95,21 +98,21 @@ public class InstagramMonitoringService {
         }
 
         boolean firstRun = repository.countByUsername(account.username()) == 0;
-        var windowEnd = clock.instant().atZone(monitoringZone).toLocalDate()
-                .atTime(21, 0).atZone(monitoringZone);
-        // Calendar days preserve 21:00 local time even across daylight saving changes.
-        var windowStart = windowEnd.minusDays(1).toInstant();
-        var windowEndInstant = windowEnd.toInstant();
+        var window = MonitoringWindow.latest(monitoringCron, monitoringZone, clock.instant());
         List<InstagramContentItem> pending = new ArrayList<>();
         for (InstagramContentItem item : providerResult.items()) {
             if (repository.existsByUsernameAndContentIdAndContentType(account.username(), item.id(), item.type())) {
                 continue;
             }
-            // Include posts after yesterday's check, through today's 21:00 check.
+            // Leave later posts unseen so the next scheduled window can notify them.
+            if (item.type() != InstagramContentType.STORY && item.publishedAt() != null
+                    && item.publishedAt().isAfter(window.end())) {
+                continue;
+            }
+            // Use the same cron as the scheduler, so changing the run time also moves the post window.
             boolean outsideWindow = item.type() != InstagramContentType.STORY
                     && (item.publishedAt() == null
-                    || !item.publishedAt().isAfter(windowStart)
-                    || item.publishedAt().isAfter(windowEndInstant));
+                    || !item.publishedAt().isAfter(window.start()));
             if (outsideWindow || firstRun && !monitoringProperties.notifyOnStartup()) {
                 saveItem(account.username(), item, NotificationDeliveryStatus.BASELINE, null);
             } else {

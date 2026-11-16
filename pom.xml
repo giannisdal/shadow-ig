@@ -11,7 +11,7 @@
 
     <groupId>com.giannisdal</groupId>
     <artifactId>shadow-ig</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <name>shadow-ig</name>
     <description>Instagram public account monitor backend</description>
 
@@ -66,6 +66,7 @@
     </dependencies>
 
     <build>
+        <finalName>shadow-ig</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

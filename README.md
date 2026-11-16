@@ -24,8 +24,11 @@ missed. The API is an external provider, so its availability and returned conten
 what the monitor can detect.
 
 One email per account contains all newly detected items and Instagram links. Previously
-seen IDs are persisted in H2 to avoid duplicate notifications. On every check, posts and reels are emailed only if published after yesterday at 21:00
-and through today at 21:00 in Europe/Athens (including daylight saving changes). Older posts and posts without a publication
+seen IDs are persisted in H2 to avoid duplicate notifications. On every check, posts and reels are emailed only if published between the two most recent scheduled run times
+in Europe/Athens (including daylight saving changes). The default window is yesterday
+21:00 through today 21:00. Changing `INSTAGRAM_MONITOR_CRON` moves both the run time and
+the post window; for example, `0 0 9 * * *` uses yesterday 09:00 through today 09:00.
+Restart the server process after changing `.env`. Older posts and posts without a publication
 timestamp are recorded silently. Active stories keep their existing notification behavior. Set `notify-on-startup=false`
 to establish the entire initial baseline silently. Failed email sends are not marked as
 processed, so they can be retried on the next check.
@@ -61,7 +64,7 @@ mvn spring-boot:run
 To check immediately, send a real digest if new content exists, and exit:
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.arguments="--instagram.monitoring.run-once=true --instagram.monitoring.cron=- --spring.main.web-application-type=none"
+mvn spring-boot:run -Dspring-boot.run.arguments="--instagram.monitoring.run-once=true --spring.main.web-application-type=none"
 ```
 
 For a foreground packaged process:

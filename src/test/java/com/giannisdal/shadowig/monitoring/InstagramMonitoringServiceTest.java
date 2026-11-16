@@ -48,8 +48,9 @@ class InstagramMonitoringServiceTest {
                 provider,
                 repository,
                 emailNotificationService,
-                Clock.fixed(Instant.parse("2026-11-11T10:31:00Z"), ZoneOffset.UTC),
-                "Europe/Athens"
+                Clock.fixed(Instant.parse("2026-11-11T19:00:00Z"), ZoneOffset.UTC),
+                "Europe/Athens",
+                "0 0 21 * * *"
         );
     }
 
@@ -139,9 +140,10 @@ class InstagramMonitoringServiceTest {
 
         verify(emailNotificationService).sendDailyDigest("account_one", List.of(today, end, story));
         var captor = ArgumentCaptor.forClass(com.giannisdal.shadowig.persistence.ProcessedInstagramContentEntity.class);
-        verify(repository, times(6)).save(captor.capture());
+        verify(repository, times(5)).save(captor.capture());
         assertThat(captor.getAllValues().stream().filter(entity -> entity.getStatus() == NotificationDeliveryStatus.BASELINE)
                 .map(com.giannisdal.shadowig.persistence.ProcessedInstagramContentEntity::getContentId))
-                .containsExactly("yesterday", "unknown", "tomorrow");
+                .containsExactly("yesterday", "unknown");
+        assertThat(captor.getAllValues()).noneMatch(entity -> entity.getContentId().equals("tomorrow"));
     }
 }
